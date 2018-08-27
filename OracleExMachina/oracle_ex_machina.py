@@ -37,7 +37,7 @@ async def on_message(message):
     if is_message_self(message):
         return
 
-    m = "dummy"
+    m = ""
     message_split_lines = message.content.splitlines()
     if message_split_lines[0].startswith("/oracle"):
         if len( message_split_lines ) <= 1 :
@@ -84,8 +84,8 @@ async def on_message(message):
             user = message.author.id
             timer = {message.channel.id : {message.author.id : CallTimer(timer_timeout * 60 ,message.channel,user)}}
             print("タイマー生成"+message.channel.id+" "+message.author.id )
-
-    await client.send_message(message.channel, m)
+	if m != "":
+		await client.send_message(message.channel, m)
 
 
 def is_message_self(message):
