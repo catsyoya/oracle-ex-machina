@@ -39,25 +39,38 @@ async def on_message(message):
 
     m = ""
     message_split_lines = message.content.splitlines()
-    if message_split_lines[0].startswith("/oracle"):
-        if len( message_split_lines ) <= 1 :
+    message_first_line = message_split_lines.pop(0).split()
+
+    if message_first_line[0] == "/oracle":
+        priority_mode = False
+        if len( message_first_line ) >= 2 :
+            if message_first_line[1] == "-p":
+                priority_mode = True
+
+        if len( message_split_lines ) <= 0 :
             m = "迷ってる事をリストアップして、それぞれの頭に「-」を付けて言ってみてね。"
-        elif len(message_split_lines ) == 2 :
-            m = "…\n「"+message_split_lines[1]+"」しかやる事ないなら、さっさとやらないと！"
+        elif len(message_split_lines ) == 1 :
+            m = "…\n「"+message_split_lines[0]+"」しかやる事ないなら、さっさとやらないと！"
         else :
-            message_split_lines.pop( 0 )
             todo_list = make_todo_list(message_split_lines )
-            m =  "ふむふむ…"
-            m += "じゃあ\n"+choice_list( todo_list )+"\nをやってみよう！"
-    elif message_split_lines[0].startswith("/dice"):
+            m =  "ふむふむ…\nそれじゃあ\n"
+            if priority_mode:
+                counter = 0
+                while( len( todo_list ) ):
+                    m += str( counter ) + "-" + choice_list( todo_list ) + "\n"
+                    counter += 1
+                m += "の順番でやってみよう！"
+            else:
+                m += choice_list( todo_list )+"\nをやってみよう！"
+    elif message_first_line[0] == "/dice":
         m = "コロコロ…\n「"+str(random.randint( 1 , 6 ))+"」が出たよ"
-    elif message_split_lines[0].startswith("/timer"):
-        words = message_split_lines[0].split(" ")
+
+    elif message_first_line[0] == "/timer":
         global timer
         timer_timeout = -1
 
-        if len(words) >= 2:
-            if ( words[1] == "stop") :
+        if len(message_first_line) >= 2:
+            if ( message_first_line[1] == "stop") :
                 print("タイマー中止"+message.channel.id+" "+message.author.id )
                 try:
                     timer[message.channel.id][message.author.id].cancel()
@@ -68,7 +81,7 @@ async def on_message(message):
                     m = "あれ？タイマー動かしてた？"
                     print("失敗")
             else:
-                timer_timeout = int( words[1] )
+                timer_timeout = int( message_first_line[1] )
                 if ( timer_timeout > 0 ):
                     m = ""+str(timer_timeout)+"分後にお知らせするね！"
                 elif ( timer_timeout == 0 ):
@@ -93,7 +106,7 @@ def is_message_self(message):
     return client.user == message.author
 
 def choice_list( list ):
-    return list[random.randint( 0 , len(list)-1 )]
+    return list.pop(random.randint( 0 , len(list)-1 ))
 
 def make_todo_list( arg_string_list ):
     is_neibour_todo = False
@@ -106,6 +119,7 @@ def make_todo_list( arg_string_list ):
             todo_list.append( todo )
             is_neibour_todo = True
         elif is_neibour_todo:
+            #複数行項目フラグが立っている場合は先頭に"-"が付いていなくても項目に含める
             todo_list[ len( todo_list ) - 1 ] += "\n" + todo
     return todo_list
 
