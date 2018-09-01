@@ -38,66 +38,17 @@ async def on_message(message):
         return
 
     m = ""
-    message_split_lines = message.content.splitlines()
-    message_first_line = message_split_lines.pop(0).split()
+    message_first_line = message.content.splitlines().pop(0).split()
+    first_word = message_first_line.pop( 0 )
 
-    if message_first_line[0] == "/oracle":
-        priority_mode = False
-        if len( message_first_line ) >= 2 :
-            if message_first_line[1] == "-p":
-                priority_mode = True
+    if first_word == "/oracle":
+        m = oracle( message , message_first_line )
+    elif first_word == "/dice":
+        m = dice( message , message_first_line )
 
-        if len( message_split_lines ) <= 0 :
-            m = "迷ってる事をリストアップして、それぞれの頭に「-」を付けて言ってみてね。"
-        elif len(message_split_lines ) == 1 :
-            m = "…\n「"+message_split_lines[0]+"」しかやる事ないなら、さっさとやらないと！"
-        else :
-            todo_list = make_todo_list(message_split_lines )
-            m =  "ふむふむ…\nそれじゃあ\n"
-            if priority_mode:
-                counter = 0
-                while( len( todo_list ) ):
-                    m += str( counter ) + "-" + choice_list( todo_list ) + "\n"
-                    counter += 1
-                m += "の順番でやってみよう！"
-            else:
-                m += choice_list( todo_list )+"\nをやってみよう！"
-    elif message_first_line[0] == "/dice":
-        m = "コロコロ…\n「"+str(random.randint( 1 , 6 ))+"」が出たよ"
-
-    elif message_first_line[0] == "/timer":
-        global timer
-        timer_timeout = -1
-
-        if len(message_first_line) >= 2:
-            if ( message_first_line[1] == "stop") :
-                print("タイマー中止"+message.channel.id+" "+message.author.id )
-                try:
-                    timer[message.channel.id][message.author.id].cancel()
-                    timer[message.channel.id].pop( str(message.author.id) )
-                    m = "タイマーを中止したよ！"
-                    print('成功')
-                except:
-                    m = "あれ？タイマー動かしてた？"
-                    print("失敗")
-            else:
-                timer_timeout = int( message_first_line[1] )
-                if ( timer_timeout > 0 ):
-                    m = ""+str(timer_timeout)+"分後にお知らせするね！"
-                elif ( timer_timeout == 0 ):
-                    timer_timeout = 30
-                    m = "よく分からないから"+timer_timeout+"分後にお知らせするね"
-                else:
-                    m = ""+str(timer_timeout)+"分後はもうとっくに過ぎてるよ…"
-        else:
-            timer_timeout = 30
-            m = "とりあえず、"+str(timer_timeout)+"分後にお知らせするね！"
-
-        if timer_timeout > 0:
-            user = message.author.id
-            timer = {message.channel.id : {message.author.id : CallTimer(timer_timeout * 60 ,message.channel,user)}}
-            print("タイマー生成"+message.channel.id+" "+message.author.id )
-
+    elif first_word == "/timer":
+        m = timer_function( message , message_first_line )
+        
     if m != "":
         await client.send_message(message.channel, m)
 
@@ -107,6 +58,82 @@ def is_message_self(message):
 
 def choice_list( list ):
     return list.pop(random.randint( 0 , len(list)-1 ))
+
+def oracle( message , function_param ):
+    priority_mode = False
+    message_option_lines = message.content.splitlines()
+    message_option_lines.pop( 0 )
+
+    if len( function_param ) >= 1 :
+        if function_param[0] == "-p":
+            priority_mode = True
+
+    
+    todo_list = make_todo_list( message_option_lines )
+    if len( todo_list ) <= 0 :
+        m = "迷ってる事をリストアップして、それぞれの頭に「-」を付けて言ってみてね。"
+    elif len( message_option_lines ) == 1 :
+        m = "…\n「"+message_option_lines[0]+"」しかやる事ないなら、さっさとやらないと！"
+    else :
+        m =  "ふむふむ…\nそれじゃあ\n"
+        if priority_mode:
+            counter = 0
+            while( len( todo_list ) ):
+                m += str( counter ) + "-" + choice_list( todo_list ) + "\n"
+                counter += 1
+            m += "の順番でやってみよう！"
+        else:
+            m += choice_list( todo_list )+"\nをやってみよう！"
+    return m
+
+def dice( message , function_param ):
+    return_message = "コロコロ…\n「 "
+    n = 0
+    dice_num = 1
+    dice_range = 6
+    for n in range( dice_num ):
+        return_message += str(random.randint( 1 , dice_range )) + " "
+
+    return_message +="」が出たよ！"
+    return return_message
+
+def timer_function( message , param_array ):
+    if len(param_array) >= 1:
+        if param_array[0] == "stop" :
+            return stop_timer( message , param_array )
+        else:
+            return begin_timer( message , int( param_array[0] ) )
+    else:
+        return begin_timer( message )
+
+def begin_timer( message , timeout_minute ):
+    global timer
+    if ( timeout_minute > 0 ):
+        return_message = ""+str(timeout_minute)+"分後にお知らせするね！"
+    elif ( timeout_minute == 0 ):
+        timeout_minute = 30
+        return_message = "とりあえず"+timeout_minute+"分後にお知らせするね"
+    else:
+        return_message = ""+str(timeout_minute)+"分後はもうとっくに過ぎてるよ…"
+        
+    user = message.author.id
+    timer = {message.channel.id : {message.author.id : CallTimer(timeout_minute * 60 ,message.channel,user)}}
+    print("タイマー生成"+message.channel.id+" "+message.author.id )
+
+    return return_message
+
+def stop_timer( message , function_param ):
+    global timer
+    print("タイマー中止"+message.channel.id+" "+message.author.id )
+    try:
+        timer[message.channel.id][message.author.id].cancel()
+        timer[message.channel.id].pop( str(message.author.id) )
+        return_message = "タイマーを中止したよ！"
+        print('成功')
+    except:
+        return_message = "あれ？タイマー動かしてた？"
+        print("失敗")
+    return return_message
 
 def make_todo_list( arg_string_list ):
     is_neibour_todo = False
