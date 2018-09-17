@@ -46,7 +46,7 @@ def oracle( message , function_param ):
     else :
         m =  "ふむふむ…\nそれじゃあ\n"
         if priority_mode:
-            counter = 0
+            counter = 1
             while( len( todo_list ) ):
                 m += str( counter ) + "-" +todo_list.pop(0) + "\n"
                 counter += 1
