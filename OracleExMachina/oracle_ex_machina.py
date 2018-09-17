@@ -7,7 +7,6 @@ import settings
 client = discord.Client()
 timer = {}
 
-
 class CallTimer:
     def __init__(self, timeLength,channel,user):
         self.timeLength = timeLength
@@ -23,67 +22,37 @@ class CallTimer:
     def cancel(self):
         self.task.cancel()
 
-@client.event
-async def on_ready():
-    print('ready...')
-    print(client.user.name)
-    print(client.user.id)
-    print('------')
 
-@client.event
-async def on_message(message):
-    
-    #botは無視する
-    if is_message_self(message):
-        return
-
-    m = ""
-    message_first_line = message.content.splitlines().pop(0).split()
-    first_word = message_first_line.pop( 0 )
-
-    if first_word == "/oracle":
-        m = oracle( message , message_first_line )
-    elif first_word == "/dice":
-        m = dice( message , message_first_line )
-
-    elif first_word == "/timer":
-        m = timer_function( message , message_first_line )
         
-    if m != "":
-        await client.send_message(message.channel, m)
-
-
 def is_message_self(message):
     return client.user == message.author
 
-def choice_list( list ):
-    return list.pop(random.randint( 0 , len(list)-1 ))
-
 def oracle( message , function_param ):
     priority_mode = False
-    message_option_lines = message.content.splitlines()
-    message_option_lines.pop( 0 )
-
+    message_lines_after_first = message.content.splitlines()
+    message_lines_after_first.pop( 0 )
     if len( function_param ) >= 1 :
         if function_param[0] == "-p":
-            priority_mode = True
+             priority_mode = True
 
-    
-    todo_list = make_todo_list( message_option_lines )
+	#入力した文字列をtodoリスト化してシャッフルする
+    todo_list = make_todo_list( message_lines_after_first )
+    length = len( todo_list )
+    todo_list = random.sample( todo_list , length )
     if len( todo_list ) <= 0 :
         m = "迷ってる事をリストアップして、それぞれの頭に「-」を付けて言ってみてね。"
-    elif len( message_option_lines ) == 1 :
-        m = "…\n「"+message_option_lines[0]+"」しかやる事ないなら、さっさとやらないと！"
+    elif len( message_lines_after_first ) == 1 :
+        m = "…\n「"+message_lines_after_first[0]+"」しかやる事ないなら、さっさとやらないと！"
     else :
         m =  "ふむふむ…\nそれじゃあ\n"
         if priority_mode:
             counter = 0
             while( len( todo_list ) ):
-                m += str( counter ) + "-" + choice_list( todo_list ) + "\n"
+                m += str( counter ) + "-" +todo_list.pop(0) + "\n"
                 counter += 1
             m += "の順番でやってみよう！"
         else:
-            m += choice_list( todo_list )+"\nをやってみよう！"
+            m += todo_list[0]+"\nをやってみよう！"
     return m
 
 def dice( message , function_param ):
@@ -149,6 +118,35 @@ def make_todo_list( arg_string_list ):
             #複数行項目フラグが立っている場合は先頭に"-"が付いていなくても項目に含める
             todo_list[ len( todo_list ) - 1 ] += "\n" + todo
     return todo_list
+
+#関数リスト
+function_list ={
+    "/oracle" : oracle ,
+    "/dice" : dice ,
+    "/timer" : timer_function
+}
+
+@client.event
+async def on_ready():
+    print('ready...')
+    print(client.user.name)
+    print(client.user.id)
+    print('------')
+
+@client.event
+async def on_message(message):
+    
+    #自分の発言は無視する
+    if is_message_self(message):
+        return
+
+    send_message = ""
+    message_first_line = message.content.splitlines().pop(0).split()
+    first_word = message_first_line.pop( 0 )
+
+    send_message = function_list[first_word](message , message_first_line )
+    if send_message != "":
+        await client.send_message(message.channel, send_message)
 
 
 client.run( settings.TOKEN )
